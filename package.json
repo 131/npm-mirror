@@ -1,0 +1,20 @@
+{
+  "name": "npm-mirror",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "async": "^2.0.0-rc.2",
+    "glob": "^7.0.3",
+    "mout": "^0.11.0",
+    "nyks": "^2.16.0",
+    "semver": "^5.1.0"
+  },
+  "private":true,
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
