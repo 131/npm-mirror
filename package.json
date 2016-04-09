@@ -1,7 +1,7 @@
 {
   "name": "npm-registry-mirror",
   "version": "1.0.0",
-  "description": "",
+  "description": "npm-registry-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs all of the dependencies for a particular node module and writes them to the local filesystem so that a simple webserver can behave like a read-only compliant package registry.",
   "main": "index.js",
   "dependencies": {
     "async": "^2.0.0-rc.2",
@@ -10,12 +10,11 @@
     "nyks": "^2.17.0",
     "semver": "^5.1.0"
   },
-  "private":true,
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords" : [
+  "keywords": [
     "npm",
     "npm-mirror",
     "npm-registry-mirror",
@@ -25,5 +24,13 @@
     "Let's have a beer and talk in Paris"
   ],
   "author": "Francois Leurent <131.js@cloudyks.org>",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ivsgroup/npm-mirror.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ivsgroup/npm-mirror/issues"
+  },
+  "homepage": "https://github.com/ivsgroup/npm-mirror"
 }
