@@ -1,6 +1,6 @@
 # Motivation
 
-npm-registry-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs all of the dependencies for a particular node module and writes them to the local filesystem so that a simple webserver can behave like a read-only compliant package registry.
+npm-registry-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs recursively all the required dependencies and writes them to the local filesystem so that a simple webserver can behave like a read-only registry.
 
 This module was designed a a drop-in replacement for the no longer maintened "npm-mirror" module.
 
