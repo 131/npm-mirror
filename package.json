@@ -1,5 +1,5 @@
 {
-  "name": "npm-mirror",
+  "name": "npm-registry-mirror",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -15,6 +15,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "keywords" : [
+    "npm",
+    "npm-mirror",
+    "npm-registry-mirror",
+    "registry-mirror",
+    "registry",
+    "async",
+    "Let's have a beer and talk in Paris"
+  ],
+  "author": "Francois Leurent <131.js@cloudyks.org>",
   "license": "ISC"
 }

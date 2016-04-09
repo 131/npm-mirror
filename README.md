@@ -1,10 +1,8 @@
 # Motivation
 
-npm-active-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs all of the dependencies for a particular node module and writes them to the local filesystem so that a simple webserver can behave like a commonjs compliant package registry.
+npm-registry-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs all of the dependencies for a particular node module and writes them to the local filesystem so that a simple webserver can behave like a read-only compliant package registry.
 
-This module is designed a a drop-in replacement for the no longer maintened "npm-mirror" module.
-
-
+This module was designed a a drop-in replacement for the no longer maintened "npm-mirror" module.
 
 
 # Usage
@@ -21,8 +19,7 @@ npm-mirror \
 ```
 
 # Notable Caveats
-
-* Your webserver must be configured to map root requests to index.json files
+* Your webserver must be configured to map directory request to /index.json files
 
 # Tests & dependencies
 npm-mirror relies on a very few but powerfull modules, with 100% coverage & test.
