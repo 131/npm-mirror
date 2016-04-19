@@ -215,8 +215,8 @@ stack_dependencies(full_list, function(){
     //dependencies are now filled with initial (top level) nodes, use q to guide diving into async recursivity
   Object.keys(dependencies).forEach(unary(q.push));
 
-  q.drain = partial(downloadPackages, function(){ 
-      console.log("All done");
+  q.drain = partial(downloadPackages, function(err){ 
+      console.log("All done", err);
   });
     
 });

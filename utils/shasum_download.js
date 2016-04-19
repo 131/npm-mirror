@@ -2,6 +2,8 @@
 
 var crypto  = require('crypto');
 var fs      = require('fs');
+var util    = require('util');
+
 
 var request      = require('nyks/http/request');
 var sha1sum      = require('nyks/fs/sha1File');
@@ -37,7 +39,7 @@ var download = function(remote, chain){
     res.pipe(dest).on("finish", function(){
       hash.end();
       var dl_sha1 = hash.read();
-      chain(dl_sha1 == challenge_sha1 ? "Corrupted file" : null);
+      chain(dl_sha1 != challenge_sha1 ? util.format("Corrupted file %s", JSON.stringify(remote), "vs", dl_sha1)  : null);
     });
   });
 };
