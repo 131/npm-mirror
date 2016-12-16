@@ -49,7 +49,7 @@ var dependencies;
 
 
 var fetch_package_json = function(package_name, chain){
-  var remote_url = sprintf("%s/%s", remote_registry_url, package_name.replace('/', '%2F'));
+  var remote_url = sprintf("%s/%s", remote_registry_url, package_name.replace('/', '%2f'));
   grequest(remote_url, chain);
 }; //limit remote registry to a sane number of parallel queries, aka 'concurrentify'
 fetch_package_json = async.queue(fetch_package_json, 5).push;
@@ -119,7 +119,7 @@ var downloadPackages = function(chain) {
 
   async.eachOfLimit(dependencies, 5, function(versions, package_name, chain) {
 
-    var package_dir = sprintf("%s/%s", package_directory, package_name);
+    var package_dir = sprintf("%s/%s", package_directory, package_name.replace('/', '%2f'));
 
     mkdirpSync(package_dir);
 
@@ -132,8 +132,8 @@ var downloadPackages = function(chain) {
         var archive_dir = sprintf("%s/%s", package_dir, version_key);
 
         mkdirpSync(archive_dir);
-        var file_name =   sprintf("%s-%s.tgz", package_name, version_key);
-        var file_url = sprintf("%s/%s/%s/%s", registry_url, package_name, version_key, file_name);
+        var file_name =   sprintf("%s-%s.tgz", package_name.replace('/', '%2f'), version_key);
+        var file_url = sprintf("%s/%s/%s/%s", registry_url, package_name.replace('/', '%2f'), version_key, file_name);
 
         var file_path = sprintf("%s/%s", archive_dir, file_name);
         var json_path = sprintf("%s/%s", archive_dir, "index.json");
@@ -143,9 +143,7 @@ var downloadPackages = function(chain) {
         version.dist.tarball = file_url;
 
         fs.writeFileSync(json_path, JSON.stringify(version));
-        if (package_name.indexOf('/') !== -1) {
-          mkdirpSync(archive_dir + '/' + package_name.split('/')[0]);
-        }
+
         downloads.push({url : remote_url, file_path : file_path, sha1:version.dist.shasum});
       });
 
