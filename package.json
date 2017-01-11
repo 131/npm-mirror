@@ -4,10 +4,10 @@
   "description": "npm-registry-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs all of the dependencies for a particular node module and writes them to the local filesystem so that a simple webserver can behave like a read-only compliant package registry.",
   "main": "index.js",
   "dependencies": {
-    "async": "^2.0.0-rc.2",
+    "async": "~2.1.4",
     "glob": "^7.0.3",
-    "mout": "^0.11.0",
-    "nyks": "^2.17.0",
+    "mout": "~1.0.0",
+    "nyks": "~3.11.0",
     "semver": "^5.1.0"
   },
   "devDependencies": {},
