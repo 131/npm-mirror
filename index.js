@@ -1,220 +1,202 @@
 "use strict";
 
-var glob    = require('glob');
-var util    = require('util');
-var fs      = require('fs');
-var path    = require('path');
-var semver  = require('semver');
-var async   = require('async');
-var sprintf = util.format;
+const path = require('path');
+const fs   = require('fs');
+const util = require('util');
+const crypto = require('crypto');
 
 
-var unique       = require('mout/array/unique');
-var map          = require('mout/object/map');
-var trim         = require('mout/string/trim');
-var filter       = require('mout/array/filter');
-var partial      = require('mout/function/partial');
-var forIn        = require('mout/object/forIn');
+const  semver  = require('semver');
+const glob     = require('glob');
+const sprintf = util.format;
 
-var mkdirpSync   = require('nyks/fs/mkdirpSync');
-var sort         = require('nyks/object/sort');
+const fetch = require('nyks/http/fetch');
+const drain = require('nyks/stream/drain');
+const pipe = require('nyks/stream/pipe');
+const mkdirpSync = require('nyks/fs/mkdirpSync');
 
-var grequest     = require('./utils/graceful_request');
-var download     = require('./utils/shasum_download');
-var unary         = require('nyks/function/unary');
+class mirror {
 
+  constructor() {
+    this.manifest_dir = "./manifests";
+    this.pool_dir     = "./pool";
+    this.packages_dir = "./packages";
 
+      //directory urls ends with /
+    this.public_pool_url     = "http://packages.ivsweb.com/npm/pool/";
+    this.public_registry_url = "http://packages.ivsweb.com/npm/";
+    this.remote_registry_url = "https://registry.npmjs.org/";
 
+    this.proceed = {};
+    this._pkgCache = {};
 
-var options = require('nyks/process/parseArgs')().dict;
+    this.ban = new RegExp("uws-trashme-after-121-merge|47admin|simplexml|csbox-.*|ivscs.*|cordova|html2pdf|activisu-.*|activbridge-.*|ivs-.*|activscreen-.*|splocalstorage|spdiscovery|spdownloader");
+    this.banversion = new RegExp("^https?://|git://");
 
-
-var registry_url = options.registry_url,
-    remote_registry_url = trim(options.remote_registry_url || "https://registry.npmjs.org/", "/"),
-    manifest_directory  = options.manifest_directory,
-    package_directory  = options.package_directory;
-
-if(!registry_url)
-  throw ("Missing registry url")
-if(!manifest_directory)
-  throw ("Missing manifest_directory");
-if(!package_directory)
-  throw ("Missing package_directory");
-
-package_directory = path.resolve(package_directory);
+  }
 
 
 
-var dependencies;
+
+  parse() {
+    var packages_list = glob.sync(sprintf("%s/*", this.packages_dir));
+    packages_list = packages_list.map( v => JSON.parse(fs.readFileSync(path.resolve(v), 'utf-8')));
+    console.log("Now ignited with %d packages", packages_list.length);
+
+  }
+
+  async run() {
+
+    var manifests_list = glob.sync(sprintf("%s/*.json", this.manifest_dir));
+    manifests_list = manifests_list.map( v => path.resolve(v));
+    manifests_list = manifests_list.map(require); //lol
+    console.log("Now ignited with %d manifests", manifests_list.length);
+
+    var which_list = [];
+    manifests_list.map((v) => {
+      var dep = {...v.dependencies, ...v.devDependencies, ...v.peerDependencies};
+      for(var package_name in dep)
+        which_list.push({package_name, version:dep[package_name]})
+    });
+
+    for(var line of which_list)
+      await this.process(line.package_name, line.version);
+    
 
 
-var fetch_package_json = function(package_name, chain){
-  var remote_url = sprintf("%s/%s", remote_registry_url, package_name.replace('/', '%2f'));
-  grequest(remote_url, chain);
-}; //limit remote registry to a sane number of parallel queries, aka 'concurrentify'
-fetch_package_json = async.queue(fetch_package_json, 5).push;
 
+  }
 
+  //check localy if we got a semver match
+  async process(package_name, requested_version, force) {
+    var hk = `${package_name}-${requested_version}`;
+    var touch = false;
 
-function stack_dependency(package_name, requested_version, chain) {
+    if(this.proceed[hk])
+      return;
 
-  if(!dependencies[package_name])
-      dependencies[package_name] = []
-
-  fetch_package_json(package_name, function(err, body){
-    if(false && err)
-      return chain(null, false);
-
-    var full_versions_list = Object.keys(body.versions || {});
-
-    var target_version = semver.maxSatisfying(full_versions_list, requested_version);
-    if(target_version && dependencies[package_name].indexOf(target_version) == -1) {
-      dependencies[package_name].push(target_version);
-      return chain(null, true); //new dependecy to scan
+    if(this.ban.test(package_name) || this.banversion.test(requested_version) ) {
+      this.proceed[hk] = true;
+      return false;
     }
 
-    chain(null, false);
-  });
+    if(!this.proceed[package_name])
+      this.proceed[package_name] = {};
+
+    if(!semver.validRange(requested_version))
+      throw `Invalid semver '${requested_version}' of package ${package_name}`;
+
+
+
+    console.log("Wanting ", package_name, requested_version);
+
+
+    var manifest_path = path.join(this.packages_dir, package_name.replace('/', '%2f'));
+
+    var manifest = this._pkgCache[package_name];
+
+    if(!manifest) {
+      if(!fs.existsSync(manifest_path) || force) {
+        console.log("Downloading remote manifest", package_name);
+        manifest = await this.fetch_package(package_name);
+        touch = true;
+      } else {
+        manifest = JSON.parse(fs.readFileSync(manifest_path));
+      }
+
+      this._pkgCache[package_name] = manifest;
+        //throw `what ${manifest_path} ?`;
+    }
+
+    var full_versions_list = Object.keys(manifest.versions || {});
+    var target_version = semver.maxSatisfying(full_versions_list, requested_version);
+
+    if(!target_version) {
+      if(force)
+        throw `Cannot find target version ${package_name}@${requested_version}`;
+      this._pkgCache[package_name] = null;
+      console.log("Forcing re-analysis");
+      return await this.process(package_name, requested_version, true);
+    }
+
+    var version = manifest.versions[target_version];
+
+    var dist = version.dist;
+    var shasum = dist.shasum;
+
+    if(await this.check_pool(shasum, dist.tarball))
+      touch = true;
+
+    //now check all dependencies
+
+    //prevent full recurse
+    this.proceed[hk] = true;
+
+    if(touch) {
+      var dep = {...version.dependencies, ...version.peerDependencies};
+      for(var dep_name in dep)
+        await this.process(dep_name, dep[dep_name]);
+    }
+
+    if(touch) {
+      for(var version in manifest.versions)
+          manifest.versions[version].dist.tarball = this.pool_url(manifest.versions[version].dist.shasum);
+      console.log("TOUCHED");
+      fs.writeFileSync(manifest_path, JSON.stringify(manifest));
+    }
+
+
+  }
+
+  pool_url(shasum) {
+    var pool_path = path.join(shasum.substr(0,2), shasum.substr(2,1), shasum);
+    return this.public_pool_url + pool_path; //no slash inbetween
+  }
+
+  async fetch_package(package_name) {
+    var remote_url = sprintf("%s/%s", this.remote_registry_url, package_name.replace('/', '%2f'));
+    var res = await fetch(remote_url);
+    if(res.statusCode != 200)
+      throw `Cannot fetch package ${package_name}`;
+    var body = JSON.parse(await drain(res));
+    return body;
+  }
+
+
+  //check if a file is available in pool, and fetch it remotly if it's not
+  async check_pool(shasum, remote_url) {
+    var pool_path = path.join(this.pool_dir, shasum.substr(0,2), shasum.substr(2,1), shasum);
+    if(fs.existsSync(pool_path))
+      return;
+
+    mkdirpSync(path.dirname(pool_path));
+
+    console.log("Downloading from", remote_url);
+    var res = await fetch(remote_url);
+    var tmp_path = pool_path + ".tmp";
+
+    var dst = fs.createWriteStream(tmp_path);
+    var hash = crypto.createHash('sha1');
+
+    await Promise.all([pipe(res, dst), pipe(res, hash)]);
+    hash = hash.read().toString('hex');
+    console.log("Got hash", hash);
+    if(shasum.toLowerCase() != hash.toLowerCase())
+      throw  `Corrupted download hash ${shasum} vs ${hash}`;
+
+    fs.renameSync(tmp_path, pool_path);
+    return true;
+  }
+
+
+
+  
+
+
+
+
+
 }
 
 
-function stack_dependencies(newlist, chain){
-  var new_packages = [];
-  async.each(newlist, function(entry, chain){
-    stack_dependency(entry.package_name, entry.version, function(err, changed){
-      if(changed)
-        new_packages.push(entry.package_name);
-      chain();
-    });
-  }, function(err){
-    chain(null, unique(new_packages));
-  });
-}
-
-
-function inline_dependencies(){
-  var out = [];
-  [].slice.apply(arguments).forEach(function(d){
-    if(!d) return;
-    for(var package_name in d)
-      out.push({package_name:package_name, version:d[package_name]});
-  });
-  return out;
-}
-
-
-
-
-var dead_ends = {};
-
-
-
-/**
-* download a list of packages & create manifest file
-* Packages list is as simple as { package_name : [version1, version2] }
-*/
-
-var downloadPackages = function(chain) {
-  var downloads = [];
-
-  async.eachOfLimit(dependencies, 5, function(versions, package_name, chain) {
-
-    var package_dir = sprintf("%s/%s", package_directory, package_name.replace('/', '%2f'));
-
-    mkdirpSync(package_dir);
-
-    fetch_package_json(package_name, function(err, _package) {
-      if(err)
-        return chain(err);
-
-      versions.forEach(function(version_key) {
-        var version = _package.versions[version_key];
-        var archive_dir = sprintf("%s/%s", package_dir, version_key);
-
-        mkdirpSync(archive_dir);
-        var file_name =   sprintf("%s-%s.tgz", package_name.replace('/', '%2f'), version_key);
-        var file_url = sprintf("%s/%s/%s/%s", registry_url, package_name.replace('/', '%2f'), version_key, file_name);
-
-        var file_path = sprintf("%s/%s", archive_dir, file_name);
-        var json_path = sprintf("%s/%s", archive_dir, "index.json");
-
-        var remote_url = version.dist.tarball;
-
-        version.dist.tarball = file_url;
-
-        fs.writeFileSync(json_path, JSON.stringify(version));
-
-        downloads.push({url : remote_url, file_path : file_path, sha1:version.dist.shasum});
-      });
-
-      var json_path = sprintf("%s/%s", package_dir, "index.json");
-      _package.versions = sort(_package.versions, versions);
-      fs.writeFileSync(json_path, JSON.stringify(_package));
-
-      chain();
-    });
-
-  }, function(){
-    //all manifest are on disk, all folders are ready, just need to dl/check all of that now
-    console.log("Now downloading %d file(s)", downloads.length);
-    async.eachLimit(downloads, 5, download, chain);
-
-
-  });
-
-}
-
-
-var q = async.queue(function(package_name, chain){
-  fetch_package_json(package_name, function(err, body){
-
-    var full_list = [];
-
-    async.each(dependencies[package_name], function(version_key, chain){
-      if(dead_ends[package_name + version_key])
-        return chain();
-
-      var version = body.versions[version_key];
-      var foo = inline_dependencies(version.dependencies,  version.peerDependencies);
-        
-      stack_dependencies(foo, function(err, new_packages){
-        if(!new_packages.length)
-          dead_ends[package_name + version_key] = true;
-
-          //dive into all new packages
-        new_packages.forEach(function(package_name){ q.push(package_name); });
-        chain();
-      });
-    }, chain);
-
-  });
-
-}, 5);
-
-
-
-
-dependencies = {}
-var full_list = [];
-
-var manifests_list = glob.sync(sprintf("%s/*.json", manifest_directory));
-
-manifests_list = manifests_list.map(function(v){ return path.resolve(v) });
-manifests_list = manifests_list.map(require); //lol
-
-manifests_list.map(function(v){
-  var foo = inline_dependencies(v.dependencies, v.devDependencies, v.peerDependencies);
-  full_list = full_list.concat(foo);
-});
-
-
-
-stack_dependencies(full_list, function(){
-  //dependencies are now filled with initial (top level) nodes, use q to guide diving into async recursivity
-  Object.keys(dependencies).forEach(unary(q.push));
-
-  q.drain = partial(downloadPackages, function(err){ 
-      console.log("All done", err);
-  });
-    
-});
+module.exports = mirror;
