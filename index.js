@@ -132,11 +132,11 @@ class mirror {
     //prevent full recurse
     this.proceed[hk] = true;
 
-    if(touch) {
-      var dep = {...version.dependencies, ...version.peerDependencies};
-      for(var dep_name in dep)
-        await this.process(dep_name, dep[dep_name]);
-    }
+
+    var dep = {...version.dependencies, ...version.peerDependencies};
+    for(var dep_name in dep)
+      await this.process(dep_name, dep[dep_name]);
+
 
     if(touch) {
       for(var version in manifest.versions)
