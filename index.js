@@ -23,8 +23,7 @@ class mirror {
     this.packages_dir = "./packages";
 
       //directory urls ends with /
-    this.public_pool_url     = "http://packages.ivsweb.com/npm/pool/";
-    this.public_registry_url = "http://packages.ivsweb.com/npm/";
+    this.public_pool_url     = "http://packages.ivscs.co/npm/pool/";
     this.remote_registry_url = "https://registry.npmjs.org/";
 
     this.proceed = {};
@@ -83,7 +82,7 @@ class mirror {
     if(!this.proceed[package_name])
       this.proceed[package_name] = {};
 
-    if(!semver.validRange(requested_version))
+    if(requested_version != "latest" && !semver.validRange(requested_version))
       throw `Invalid semver '${requested_version}' of package ${package_name}`;
 
 
@@ -109,8 +108,7 @@ class mirror {
     }
 
     var full_versions_list = Object.keys(manifest.versions || {});
-    var target_version = semver.maxSatisfying(full_versions_list, requested_version);
-
+    var target_version = requested_version == "latest" ? manifest["dist-tags"].latest : semver.maxSatisfying(full_versions_list, requested_version);
     if(!target_version) {
       if(force)
         throw `Cannot find target version ${package_name}@${requested_version}`;
@@ -124,7 +122,8 @@ class mirror {
     var dist = version.dist;
     var shasum = dist.shasum;
 
-    if(await this.check_pool(shasum, dist.tarball))
+
+    if(await this.check_pool(shasum, dist._tarball || dist.tarball))
       touch = true;
 
     //now check all dependencies
@@ -132,6 +131,8 @@ class mirror {
     //prevent full recurse
     this.proceed[hk] = true;
 
+    if(requested_version != 'latest')
+      await this.process(package_name, 'latest');
 
     var dep = {...version.dependencies, ...version.peerDependencies};
     for(var dep_name in dep)
@@ -139,8 +140,11 @@ class mirror {
 
 
     if(touch) {
-      for(var version in manifest.versions)
+      for(var version in manifest.versions) {
+          if(!manifest.versions[version].dist._tarball)
+            manifest.versions[version].dist._tarball = manifest.versions[version].dist.tarball;
           manifest.versions[version].dist.tarball = this.pool_url(manifest.versions[version].dist.shasum);
+      }
       console.log("TOUCHED");
       fs.writeFileSync(manifest_path, JSON.stringify(manifest));
     }
