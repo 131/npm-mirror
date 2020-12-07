@@ -17,21 +17,36 @@ const mkdirpSync = require('nyks/fs/mkdirpSync');
 
 class mirror {
 
-  constructor() {
-    this.manifest_dir = "./manifests";
-    this.pool_dir     = "./pool";
-    this.packages_dir = "./packages";
+  constructor(config_path = false) {
 
-      //directory urls ends with /
-    this.public_pool_url     = "http://packages.ivscs.co/npm/pool/";
-    this.remote_registry_url = "https://registry.npmjs.org/";
+    let config = {
+      'manifest_dir'  : "./manifests",
+      'pool_dir'      : "./pool",
+      'packages_dir'  : "./packages",
+
+      'public_pool_url' : "http://my-comany.org/npm/pool/",
+      'remote_registry_url' : "https://registry.npmjs.org/",
+      'exclude_mask' : "",
+    };
+
+    if(fs.existsSync(config_path)) {
+      let userConfig = require(config_path);
+      config = {...config, ...userConfig};
+    }
+
+    this.manifest_dir = config.manifest_dir;
+    this.pool_dir     = config.pool_dir;
+    this.packages_dir = config.packages_dir;
+
+    //directory urls ends with /
+    this.public_pool_url     = config.public_pool_url;
+    this.remote_registry_url = config.remote_registry_url;
 
     this.proceed = {};
     this._pkgCache = {};
 
-    this.ban = new RegExp("uws-trashme-after-121-merge|47admin|simplexml|csbox-.*|ivscs.*|cordova|html2pdf|activisu-.*|activbridge-.*|ivs-.*|activscreen-.*|splocalstorage|spdiscovery|spdownloader");
+    this.ban = new RegExp(config.exclude_mask);
     this.banversion = new RegExp("^https?://|git://");
-
   }
 
 
@@ -39,7 +54,7 @@ class mirror {
 
   parse() {
     var packages_list = glob.sync(sprintf("%s/*", this.packages_dir));
-    packages_list = packages_list.map( v => JSON.parse(fs.readFileSync(path.resolve(v), 'utf-8')));
+    packages_list = packages_list.map(v => JSON.parse(fs.readFileSync(path.resolve(v), 'utf-8')));
     console.log("Now ignited with %d packages", packages_list.length);
 
   }
@@ -47,7 +62,7 @@ class mirror {
   async run() {
 
     var manifests_list = glob.sync(sprintf("%s/*.json", this.manifest_dir));
-    manifests_list = manifests_list.map( v => path.resolve(v));
+    manifests_list = manifests_list.map(v => path.resolve(v));
     manifests_list = manifests_list.map(require); //lol
     console.log("Now ignited with %d manifests", manifests_list.length);
 
@@ -55,12 +70,12 @@ class mirror {
     manifests_list.map((v) => {
       var dep = {...v.dependencies, ...v.devDependencies, ...v.peerDependencies};
       for(var package_name in dep)
-        which_list.push({package_name, version:dep[package_name]})
+        which_list.push({package_name, version : dep[package_name]});
     });
 
     for(var line of which_list)
       await this.process(line.package_name, line.version);
-    
+
 
 
 
@@ -74,7 +89,7 @@ class mirror {
     if(this.proceed[hk])
       return;
 
-    if(this.ban.test(package_name) || this.banversion.test(requested_version) ) {
+    if(this.ban.test(package_name) || this.banversion.test(requested_version)) {
       this.proceed[hk] = true;
       return false;
     }
@@ -104,7 +119,7 @@ class mirror {
       }
 
       this._pkgCache[package_name] = manifest;
-        //throw `what ${manifest_path} ?`;
+      //throw `what ${manifest_path} ?`;
     }
 
     var full_versions_list = Object.keys(manifest.versions || {});
@@ -140,10 +155,10 @@ class mirror {
 
 
     if(touch) {
-      for(var version in manifest.versions) {
-          if(!manifest.versions[version].dist._tarball)
-            manifest.versions[version].dist._tarball = manifest.versions[version].dist.tarball;
-          manifest.versions[version].dist.tarball = this.pool_url(manifest.versions[version].dist.shasum);
+      for(let version in manifest.versions) {
+        if(!manifest.versions[version].dist._tarball)
+          manifest.versions[version].dist._tarball = manifest.versions[version].dist.tarball;
+        manifest.versions[version].dist.tarball = this.pool_url(manifest.versions[version].dist.shasum);
       }
       console.log("TOUCHED");
       fs.writeFileSync(manifest_path, JSON.stringify(manifest));
@@ -153,7 +168,7 @@ class mirror {
   }
 
   pool_url(shasum) {
-    var pool_path = path.join(shasum.substr(0,2), shasum.substr(2,1), shasum);
+    var pool_path = path.join(shasum.substr(0, 2), shasum.substr(2, 1), shasum);
     return this.public_pool_url + pool_path; //no slash inbetween
   }
 
@@ -169,7 +184,7 @@ class mirror {
 
   //check if a file is available in pool, and fetch it remotly if it's not
   async check_pool(shasum, remote_url) {
-    var pool_path = path.join(this.pool_dir, shasum.substr(0,2), shasum.substr(2,1), shasum);
+    var pool_path = path.join(this.pool_dir, shasum.substr(0, 2), shasum.substr(2, 1), shasum);
     if(fs.existsSync(pool_path))
       return;
 
@@ -194,7 +209,7 @@ class mirror {
 
 
 
-  
+
 
 
 
