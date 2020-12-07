@@ -7,7 +7,7 @@ This module was designed a a drop-in replacement for the no longer maintened "np
 
 # Usage
 ```
-npm install -g npm-mirror
+npm install -g npm-registry-mirror
 
 # Put some packages.json (e.g. rename & timestamp them) in /some/path/to/manifests/
 
@@ -17,9 +17,6 @@ npm-mirror \
 --package_directory=/path/to/local/cache/     \
 
 ```
-
-# Notable Caveats
-* Your webserver must be configured to map directory request to /index.json files
 
 # Tests & dependencies
 npm-mirror relies on a very few but powerfull modules, with 100% coverage & test.

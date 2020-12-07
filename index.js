@@ -20,13 +20,13 @@ class mirror {
   constructor(config_path = false) {
 
     let config = {
-      'manifest_dir'  : "./manifests",
-      'pool_dir'      : "./pool",
-      'packages_dir'  : "./packages",
+      'manifest_dir'  : "./mirror/manifests",
+      'pool_dir'      : "./mirror/pool",
+      'packages_dir'  : "./mirror/packages",
 
-      'public_pool_url' : "http://my-comany.org/npm/pool/",
+      'public_pool_url' : "http://my-company.org/npm/pool/",
       'remote_registry_url' : "https://registry.npmjs.org/",
-      'exclude_mask' : "",
+      'exclude_mask' : "^$",
     };
 
     if(fs.existsSync(config_path)) {
@@ -34,9 +34,10 @@ class mirror {
       config = {...config, ...userConfig};
     }
 
-    this.manifest_dir = config.manifest_dir;
-    this.pool_dir     = config.pool_dir;
-    this.packages_dir = config.packages_dir;
+    this.manifest_dir = mkdirpSync(config.manifest_dir);
+    this.pool_dir     = mkdirpSync(config.pool_dir);
+    this.packages_dir = mkdirpSync(config.packages_dir);
+
 
     //directory urls ends with /
     this.public_pool_url     = config.public_pool_url;
@@ -56,7 +57,6 @@ class mirror {
     var packages_list = glob.sync(sprintf("%s/*", this.packages_dir));
     packages_list = packages_list.map(v => JSON.parse(fs.readFileSync(path.resolve(v), 'utf-8')));
     console.log("Now ignited with %d packages", packages_list.length);
-
   }
 
   async run() {
@@ -75,8 +75,6 @@ class mirror {
 
     for(var line of which_list)
       await this.process(line.package_name, line.version);
-
-
 
 
   }
