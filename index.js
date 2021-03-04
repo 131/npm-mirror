@@ -30,7 +30,7 @@ class mirror {
     };
 
     if(fs.existsSync(config_path)) {
-      let userConfig = require(config_path);
+      let userConfig = require(path.resolve(config_path));
       config = {...config, ...userConfig};
     }
 
