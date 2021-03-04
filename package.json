@@ -6,7 +6,7 @@
   "dependencies": {
     "glob": "^7.0.3",
     "mout": "~1.0.0",
-    "nyks": "^4.4.0",
+    "nyks": "^6.1.7",
     "semver": "^5.1.0"
   },
   "scripts": {

@@ -80,7 +80,7 @@ class mirror {
   }
 
   //check localy if we got a semver match
-  async process(package_name, requested_version, force) {
+  async process(package_name, requested_version, force = false) {
     var hk = `${package_name}-${requested_version}`;
     var touch = false;
 
