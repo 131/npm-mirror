@@ -84,16 +84,19 @@ describe("Full test suite", function() {
 
 
   it("Should compare check behavior using npm ls", async () => {
-    function replacer(key, value) {
-      return key === 'resolved' ? undefined : value;
-    }
+    //compare only versions
+    var cleanup = function({version, name, dependencies}) {
+      for(let dep in dependencies || {})
+        dependencies[dep] = cleanup(dependencies[dep]);
+      return {version, name, dependencies};
+    };
 
     console.log("Running npm install with default registry");
     await passthru("npm", ["install", "--force"], {cwd : manifest_dir, shell : true});
 
     console.log("Recording status as reference");
     let child = spawn("npm", ["ls", "--json"], {cwd : manifest_dir, shell : true});
-    let official = JSON.stringify(JSON.parse(await drain(child.stdout)), replacer, 2);
+    let official = cleanup(JSON.parse(await drain(child.stdout)));
     console.log("Cleaning up");
     await rmrf(path.join(manifest_dir, "node_modules"));
 
@@ -102,11 +105,9 @@ describe("Full test suite", function() {
 
     console.log("Recording status as challenge");
     child = spawn("npm", ["ls", "--json"], {cwd : manifest_dir, shell : true});
-    let mirror = JSON.stringify(JSON.parse(await drain(child.stdout)), replacer, 2);
-
+    let mirror = cleanup(JSON.parse(await drain(child.stdout)));
 
     expect(mirror).to.eql(official);
-
   });
 
 

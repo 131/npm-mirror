@@ -1,0 +1,40 @@
+0 info it worked if it ends with ok
+1 verbose cli [ '/usr/local/bin/node',
+1 verbose cli   '/usr/local/bin/npm',
+1 verbose cli   'version',
+1 verbose cli   'patch' ]
+2 info using npm@2.15.12
+3 info using node@v10.23.2
+4 info git [ 'status', '--porcelain' ]
+5 info preversion npm-registry-mirror@2.0.2
+6 verbose unsafe-perm in lifecycle true
+7 info npm-registry-mirror@2.0.2 Failed to exec preversion script
+8 verbose stack Error: npm-registry-mirror@2.0.2 preversion: `npm run checkall`
+8 verbose stack Exit status 1
+8 verbose stack     at EventEmitter.<anonymous> (/usr/local/lib/node_modules/npm/lib/utils/lifecycle.js:217:16)
+8 verbose stack     at EventEmitter.emit (events.js:198:13)
+8 verbose stack     at ChildProcess.<anonymous> (/usr/local/lib/node_modules/npm/lib/utils/spawn.js:24:14)
+8 verbose stack     at ChildProcess.emit (events.js:198:13)
+8 verbose stack     at maybeClose (internal/child_process.js:982:16)
+8 verbose stack     at Process.ChildProcess._handle.onexit (internal/child_process.js:259:5)
+9 verbose pkgid npm-registry-mirror@2.0.2
+10 verbose cwd /mnt/d/dvp/node_modules/npm-registry-mirror
+11 error Linux 4.4.0-19041-Microsoft
+12 error argv "/usr/local/bin/node" "/usr/local/bin/npm" "version" "patch"
+13 error node v10.23.2
+14 error npm  v2.15.12
+15 error code ELIFECYCLE
+16 error npm-registry-mirror@2.0.2 preversion: `npm run checkall`
+16 error Exit status 1
+17 error Failed at the npm-registry-mirror@2.0.2 preversion script 'npm run checkall'.
+17 error This is most likely a problem with the npm-registry-mirror package,
+17 error not with npm itself.
+17 error Tell the author that this fails on your system:
+17 error     npm run checkall
+17 error You can get information on how to open an issue for this project with:
+17 error     npm bugs npm-registry-mirror
+17 error Or if that isn't available, you can get their info via:
+17 error
+17 error     npm owner ls npm-registry-mirror
+17 error There is likely additional logging output above.
+18 verbose exit [ 1, true ]

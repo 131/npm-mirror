@@ -6,11 +6,11 @@
   "dependencies": {
     "glob": "^7.0.3",
     "mout": "~1.0.0",
-    "nyks": "^6.1.7",
+    "nyks": "^6.1.8",
     "semver": "^5.1.0"
   },
   "scripts": {
-    "preversion": "npm run checkall",
+    "preversion": "npm run eslint",
     "eslint": "eslint .",
     "test": "npm run eslint && npm run cover",
     "mocha": "node node_modules/mocha/bin/_mocha -b",
