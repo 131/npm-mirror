@@ -29,10 +29,13 @@ class mirror {
       'exclude_mask' : "^$",
     };
 
-    if(fs.existsSync(config_path)) {
-      let userConfig = require(path.resolve(config_path));
-      config = {...config, ...userConfig};
-    }
+    let userConfig = {};
+    if(typeof config_path == "string" && fs.existsSync(config_path))
+      userConfig = require(path.resolve(config_path));
+    if(typeof config_path == "object")
+      userConfig = config_path;
+
+    config = {...config, ...userConfig};
 
     this.manifest_dir = mkdirpSync(config.manifest_dir);
     this.pool_dir     = mkdirpSync(config.pool_dir);
@@ -166,7 +169,7 @@ class mirror {
   }
 
   pool_url(shasum) {
-    var pool_path = path.join(shasum.substr(0, 2), shasum.substr(2, 1), shasum);
+    var pool_path = path.posix.join(shasum.substr(0, 2), shasum.substr(2, 1), shasum);
     return this.public_pool_url + pool_path; //no slash inbetween
   }
 

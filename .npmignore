@@ -1,3 +1,5 @@
 /node_modules
 /mirror
+/test
+/coverage
 

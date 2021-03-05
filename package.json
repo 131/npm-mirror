@@ -10,10 +10,18 @@
     "semver": "^5.1.0"
   },
   "scripts": {
-    "eslint": "eslint ."
+    "preversion": "npm run checkall",
+    "eslint": "eslint .",
+    "test": "npm run eslint && npm run cover",
+    "mocha": "node node_modules/mocha/bin/_mocha -b",
+    "cover": "nyc --temp-directory coverage/.nyc_output --reporter text-summary --reporter html --reporter lcov  mocha"
   },
   "devDependencies": {
-    "eslint-plugin-ivs": "^1.3.0"
+    "eslint-plugin-ivs": "^1.3.0",
+    "expect.js": "^0.3.1",
+    "express": "^4.14.0",
+    "mocha": "^3.1.2",
+    "nyc": "^15.1.0"
   },
   "keywords": [
     "npm",
@@ -23,14 +31,14 @@
     "registry",
     "Let's have a beer and talk in Paris"
   ],
-  "author": "Francois Leurent <131.js@cloudyks.org>",
+  "author": "Francois Leurent <131.code@leurent.email>",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ivsgroup/npm-mirror.git"
+    "url": "https://github.com/131/npm-mirror.git"
   },
   "bugs": {
-    "url": "https://github.com/ivsgroup/npm-mirror/issues"
+    "url": "https://github.com/131/npm-mirror/issues"
   },
-  "homepage": "https://github.com/ivsgroup/npm-mirror"
+  "homepage": "https://github.com/131/npm-mirror"
 }

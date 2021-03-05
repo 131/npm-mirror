@@ -1,3 +1,12 @@
+[![Build Status](https://github.com/131/npm-mirror/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/131/npm-mirror/actions/workflows/test.yml)
+[![Coverage Status](https://coveralls.io/repos/github/131/npm-mirror/badge.svg?branch=master)](https://coveralls.io/github/131/npm-mirror?branch=master)
+[![Version](https://img.shields.io/npm/v/npm-registry-mirror.svg)](https://www.npmjs.com/package/npm-registry-mirror)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
+[![Code style](https://img.shields.io/badge/code%2fstyle-ivs-green.svg)](https://www.npmjs.com/package/eslint-plugin-ivs)
+
+
+
+
 # Motivation
 
 npm-registry-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs recursively all the required dependencies and writes them to the local filesystem so that a simple webserver can behave like a read-only registry.
