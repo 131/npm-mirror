@@ -13,7 +13,7 @@ const rmrf     = require('nyks/fs/rmrf');
 const drain    = require('nyks/stream/drain');
 
 const expect = require('expect.js');
-const Mirror = require('../');
+const Mirror = require('../mirror');
 
 /**
 * In this test suite, we create a mirror
@@ -79,7 +79,7 @@ describe("Full test suite", function() {
     let manifest_path = path.join(manifest_dir, 'package.json');
 
     fs.writeFileSync(manifest_path, JSON.stringify(mock_manifest, null, 2));
-    await mirror.run();
+    await mirror.process();
   });
 
 

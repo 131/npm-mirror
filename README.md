@@ -14,6 +14,8 @@ npm-registry-mirror is a utility for mirroring a subset of npm packages from ano
 This module was designed a a drop-in replacement for the no longer maintened "npm-mirror" module.
 
 
+
+
 # Usage
 ```
 npm install -g npm-registry-mirror
@@ -24,6 +26,19 @@ npm-mirror \
 --registry_url=http://myserver.com/npm/       \
 --manifest_directory=/some/path/to/manifests/ \
 --package_directory=/path/to/local/cache/     \
+
+```
+
+## Http server
+
+```
+cnyks . [config_path] --ir://start
+
+# force curl no buffer
+curl -X POST http://127.0.0.1:8080/process
+cat /mnt/r/package.json | curl -X PUT --data-binary @- http://127.0.0.1:8080/feed
+
+
 
 ```
 
