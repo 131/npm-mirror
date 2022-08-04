@@ -19,25 +19,14 @@ const mkdirpSync = require('nyks/fs/mkdirpSync');
 
 class mirror {
 
-  constructor(config_path = false) {
+  constructor(config_path = (process.env["MIRROR_CONFIG_PATH"] || './example/config.json')) {
 
-    let config = {
-      'manifest_dir'  : "./mirror/manifests",
-      'pool_dir'      : "./mirror/pool",
-      'packages_dir'  : "./mirror/packages",
-
-      'public_pool_url' : "http://my-company.org/npm/pool/",
-      'remote_registry_url' : "https://registry.npmjs.org/",
-      'exclude_mask' : "^$",
-    };
-
-    let userConfig = {};
+    let config;
     if(typeof config_path == "string" && fs.existsSync(config_path))
-      userConfig = require(path.resolve(config_path));
+      config = require(path.resolve(config_path));
     if(typeof config_path == "object")
-      userConfig = config_path;
+      config = config_path;
 
-    config = {...config, ...userConfig};
 
     this.manifest_dir = mkdirpSync(config.manifest_dir);
     this.pool_dir     = mkdirpSync(config.pool_dir);

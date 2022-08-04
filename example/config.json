@@ -1,0 +1,9 @@
+{
+  "manifest_dir"  : "./mirror/manifests",
+  "pool_dir"      : "./mirror/pool",
+  "packages_dir"  : "./mirror/packages",
+
+  "public_pool_url" : "http://my-company.org/npm/pool/",
+  "remote_registry_url" : "https://registry.npmjs.org/",
+  "exclude_mask" : "^$"
+}

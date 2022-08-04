@@ -12,16 +12,25 @@ const drain = require('nyks/stream/drain');
 const express = require('express');
 
 class server {
-  constructor(config_path = null) {
 
-    this.config = {};
-    if(typeof config_path == "string" && fs.existsSync(config_path))
+  constructor(config_path = (process.env["MIRROR_CONFIG_PATH"] || './example/config.json')) {
+
+    this.config = null;
+
+    if(typeof config_path == "string" && fs.existsSync(config_path)) {
+      console.log("Loading configuration from", config_path);
       this.config = require(path.resolve(config_path));
+    }
     if(typeof config_path == "object")
       this.config = config_path;
 
+    if(!this.config)
+      throw `Invalid service configuration (check process.env.MIRROR_CONFIG_PATH)`;
+
     this.port = this.config.port || 0;
     this.mirror = new Mirror(this.config);
+    this.http_packages_root = this.config.http_packages_root || '/';
+    this.http_pool_root     = this.config.http_pool_root     || '/-/pool/';
 
     this.app = express();
     this.app.use(function(req, res, next) {
@@ -38,8 +47,8 @@ class server {
       next();
     });
 
-    this.app.use("/", express.static(this.mirror.packages_dir));
-    this.app.use("/-/pool/", express.static(this.mirror.pool_dir));
+    this.app.use(this.http_packages_root, express.static(this.mirror.packages_dir));
+    this.app.use(this.http_pool_root, express.static(this.mirror.pool_dir));
 
     this.app.post("/process", async (req, res)  => {
       try {
