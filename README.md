@@ -32,6 +32,7 @@ npm-mirror \
 ## Http server
 
 ```
+export DEBUG=*,-send,-express:*
 cnyks . [config_path] --ir://start
 
 # force curl no buffer

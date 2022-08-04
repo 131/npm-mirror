@@ -9,7 +9,7 @@ const {format} = require('util');
 
 const drain = require('nyks/stream/drain');
 
-
+const express = require('express');
 
 class server {
   constructor(config_path = null) {
@@ -17,54 +17,75 @@ class server {
     this.config = {};
     if(typeof config_path == "string" && fs.existsSync(config_path))
       this.config = require(path.resolve(config_path));
+    if(typeof config_path == "object")
+      this.config = config_path;
 
+    this.port = this.config.port || 0;
+    this.mirror = new Mirror(this.config);
 
-    this.port = this.config.port || 8080;
-    this.server = http.createServer(this.dispatch.bind(this));
-  }
-
-  async dispatch(req, res) {
-    try {
+    this.app = express();
+    this.app.use(function(req, res, next) {
       console.log("Incoming query %s:%s", req.method, req.url);
+      next();
+    });
 
-      if(req.url == "/process" && req.method == "POST")
+    //preserve %2f style in express/static/send
+    this.app.use("/", function(req, res, next) {
+      if(/%2f/.test(req.url)) {
+        req.url = req.url.replace("%", "%25");
+        req.originalUrl = req.url;
+      }
+      next();
+    });
+
+    this.app.use("/", express.static(this.mirror.packages_dir));
+    this.app.use("/-/pool/", express.static(this.mirror.pool_dir));
+
+    this.app.post("/process", async (req, res)  => {
+      try {
         return await this.process(req, res);
-
-      if(req.url == "/feed" && req.method == "PUT")
+      } catch(err) {
+        res.status(500).send(String(err));
+      }
+    });
+    this.app.put("/feed", async (req, res) => {
+      try {
         return await this.feed(req, res);
+      } catch(err) {
+        res.status(500).send(String(err));
+      }
+    });
 
-      res.statusCode = 400;
-      res.end("Unkown request");
-
-    } catch(err) {
+    this.app.use((err, req, res, next) => { // eslint-disable-line
       console.error("Cannot dispatch", err);
-      res.statusCode = 500;
-      res.end(String(err));
-    }
+      res.status(500).send(String(err));
+    });
+
+
+    this.server = http.createServer(this.app);
   }
 
   async feed(req, res) {
     let manifest = JSON.parse(await drain(req));
-
-    let processor     = new Mirror(this.config);
-    let manifest_path = processor.feed(manifest);
-
+    let manifest_path = this.mirror.feed(manifest);
     res.end(`Write manifest in ${manifest_path}`);
   }
 
   async process(req, res) {
-    let processor = new Mirror(this.config);
-    processor.trace  = function(...line) {
+    //todo  : lock processor
+    this.mirror.trace  = function(...line) {
       line = format(...line);
       return new Promise(resolve =>  res.write(line + "\n", resolve));
     };
 
-    await processor.process();
+    await this.mirror.process();
     await res.end();
   }
 
   async start() {
-    await new Promise(resolve => this.server.listen(this.port, resolve));
+    this.port = await new Promise(resolve => this.server.listen(this.port, () => {
+      resolve(this.server.address().port);
+    }));
     console.log("Server is now ready on port", this.port);
   }
 

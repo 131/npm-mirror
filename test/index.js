@@ -4,7 +4,6 @@ const path = require('path');
 const fs   = require('fs');
 const {spawn}    = require('child_process');
 
-const express  = require('express');
 const mkdirpSync = require('nyks/fs/mkdirpSync');
 
 const passthru = require('nyks/child_process/passthru');
@@ -13,7 +12,7 @@ const rmrf     = require('nyks/fs/rmrf');
 const drain    = require('nyks/stream/drain');
 
 const expect = require('expect.js');
-const Mirror = require('../mirror');
+const Server = require('../server');
 
 /**
 * In this test suite, we create a mirror
@@ -41,11 +40,10 @@ describe("Full test suite", function() {
   const packages_dir  = path.join(mirror_dir, "packages");
   const test_dir  = path.join(mirror_dir, "test");
 
-  let mirror, registry_url;
-  let cleanup = true;
+  let server, registry_url;
 
   before("should prepare folder structure", async () => {
-    if(cleanup) await rmrf(mirror_dir);
+    await rmrf(mirror_dir);
     await rmrf(test_dir);
     mkdirpSync(test_dir);
     mkdirpSync(manifest_dir);
@@ -54,38 +52,28 @@ describe("Full test suite", function() {
     fs.writeFileSync(path.join(test_dir, "package.json"), JSON.stringify(mock_manifest));
   });
 
-  if(cleanup) after("it should cleanup all", async () => {
+  after("it should cleanup all", async () => {
     console.log("Cleaning all");
     await rmrf(mirror_dir);
   });
 
   it("SHould create a mock server", async () => {
-
-    var app = express();
-    app.use(function(req, res, next) {
-      console.log(req.url);
-      next();
-    });
-    app.use("/", express.static(mirror_dir));
-
-    let port = await new Promise(resolve => {
-      app.listen(0, '127.0.0.1', function() {
-        resolve(this.address().port);
-      });
-    });
+    let port = 8080;
 
     let local_server = `http://127.0.0.1:${port}`;
-    let public_pool_url = `${local_server}/pool/`;
-    registry_url    = `${local_server}/packages/`;
+    let public_pool_url = `${local_server}/-/pool/`;
+    registry_url    = `${local_server}/`;
+
+    let config = { port, manifest_dir, pool_dir, packages_dir, public_pool_url};
+    server =  new Server(config);
+    await server.start();
 
     console.log("Local test mirror is ready", registry_url);
-
-    mirror = new Mirror({ manifest_dir, pool_dir, packages_dir, public_pool_url});
   });
 
   it("Should ignite cache mirror with nyks & dependencies", async () => {
-    await mirror.feed(mock_manifest);
-    await mirror.process();
+    await server.mirror.feed(mock_manifest);
+    await server.mirror.process();
   });
 
 
@@ -98,21 +86,25 @@ describe("Full test suite", function() {
     };
 
     console.log("Running npm install with default registry");
-    await passthru("npm", ["install", "--force"], {cwd : test_dir, shell : true});
+
+    let ctx = {cwd : test_dir, env : {
+      npm_config_cache : path.join(test_dir, ".cache"),
+    }, shell : true};
+
+    await passthru("npm", ["install", "--force"], {...ctx});
 
     console.log("Recording status as reference");
-    let child = spawn("npm", ["ls", "--json"], {cwd : test_dir, shell : true});
+    let child = spawn("npm", ["ls", "--json"], {...ctx});
     let official = cleanup(JSON.parse(await drain(child.stdout)));
     console.log("Cleaning up");
     await rmrf(path.join(test_dir, "node_modules"));
 
     console.log("Running npm install with mirror registry");
-    await passthru("npm", ["install", "--force", `--registry=${registry_url}`], {cwd : test_dir, shell : true});
+    await passthru("npm", ["install", "--force", `--registry=${registry_url}`], {...ctx});
 
     console.log("Recording status as challenge");
-    child = spawn("npm", ["ls", "--json"], {cwd : test_dir, shell : true});
+    child = spawn("npm", ["ls", "--json"], {...ctx});
     let mirror = cleanup(JSON.parse(await drain(child.stdout)));
-
     expect(mirror).to.eql(official);
   });
 
