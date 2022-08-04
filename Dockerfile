@@ -5,3 +5,4 @@ RUN npm install -g cnyks npm-registry-mirror
 
 
 CMD ["cnyks", "npm-registry-mirror/server", "--ir://start"]
+LABEL "org.opencontainers.image.version"="2.1.3"
