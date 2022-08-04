@@ -88,6 +88,7 @@ describe("Full test suite", function() {
     console.log("Running npm install with default registry");
 
     let ctx = {cwd : test_dir, env : {
+      ...process.env,
       npm_config_cache : path.join(test_dir, ".cache"),
     }, shell : true};
 
