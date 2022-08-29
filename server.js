@@ -40,6 +40,7 @@ class server {
 
     //preserve %2f style in express/static/send
     this.app.use("/", function(req, res, next) {
+      req.url = req.url.replace("%2F", "%2f");
       if(/%2f/.test(req.url)) {
         req.url = req.url.replace("%", "%25");
         req.originalUrl = req.url;
@@ -47,7 +48,7 @@ class server {
       next();
     });
 
-    this.app.use(this.http_packages_root, express.static(this.mirror.packages_dir));
+    this.app.use(this.http_packages_root, express.static(this.mirror.packages_dir, {fallthrough : false}));
     this.app.use(this.http_pool_root, express.static(this.mirror.pool_dir));
 
     this.app.post("/process", async (req, res)  => {
