@@ -48,7 +48,7 @@ class server {
       next();
     });
 
-    this.app.use(this.http_packages_root, express.static(this.mirror.packages_dir, {fallthrough : false}));
+    this.app.use(this.http_packages_root, express.static(this.mirror.packages_dir));
     this.app.use(this.http_pool_root, express.static(this.mirror.pool_dir));
 
     this.app.post("/process", async (req, res)  => {
