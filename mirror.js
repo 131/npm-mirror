@@ -40,7 +40,7 @@ class mirror {
     this.proceed = {};
     this._pkgCache = {};
 
-    this.ban = new RegExp(config.exclude_mask || '$a');
+    this.ban = new RegExp(config.exclude_mask || '^$');
     this.banversion = new RegExp("^https?://|git://");
 
     this.trace = console.log.bind(console);
@@ -86,29 +86,25 @@ class mirror {
 
     for(var line of which_list)
       await this.process_package(line.package_name, line.version);
-
-
   }
 
   //check localy if we got a semver match
-  async process_package(package_name, requested_version, force = false) {
-    var hk = `${package_name}-${requested_version}`;
-    var touch = false;
-
-    if(this.proceed[hk])
-      return;
-
-    if(this.ban.test(package_name) || this.banversion.test(requested_version)) {
-      this.proceed[hk] = true;
-      return false;
-    }
+  async process_package(package_name, requested_version, forced = false) {
+    var touched = false;
 
     if(!this.proceed[package_name])
       this.proceed[package_name] = {};
 
+    if(this.proceed[package_name][requested_version])
+      return touched;
+
+    if(this.ban.test(package_name) || this.banversion.test(requested_version)) {
+      this.proceed[package_name][requested_version] = true;
+      return touched;
+    }
+
     if(!semver.validRange(requested_version))
       throw `Invalid semver '${requested_version}' of package ${package_name}`;
-
 
 
     await this.trace("Wanting ", package_name, requested_version);
@@ -116,29 +112,30 @@ class mirror {
 
     var manifest_path = path.join(this.packages_dir, package_name.replace('/', '%2f'));
 
+    if(!(package_name in this._pkgCache))
+      this._pkgCache[package_name] = fs.existsSync(manifest_path) ? JSON.parse(fs.readFileSync(manifest_path)) : {};
+
     var manifest = this._pkgCache[package_name];
 
-    if(!manifest) {
-      if(!fs.existsSync(manifest_path) || force) {
-        this.trace("Downloading remote manifest", package_name);
-        manifest = await this.fetch_package(package_name);
-        touch = true;
-      } else {
-        manifest = JSON.parse(fs.readFileSync(manifest_path));
-      }
-
-      this._pkgCache[package_name] = manifest;
-      //throw `what ${manifest_path} ?`;
-    }
-
     var full_versions_list = Object.keys(manifest.versions || {});
-    var target_version = semver.maxSatisfying(full_versions_list, requested_version);
+    var target_version     = semver.maxSatisfying(full_versions_list, requested_version);
+
     if(!target_version) {
-      if(force)
+      if(forced)
         throw `Cannot find target version ${package_name}@${requested_version}`;
-      this._pkgCache[package_name] = null;
+
+      this.trace("Downloading remote manifest", package_name);
+      let manifest = await this.fetch_package(package_name);
+      fs.writeFileSync(manifest_path, JSON.stringify(manifest));
+
       this.trace("Forcing re-analysis");
-      return await this.process_package(package_name, requested_version, true);
+      let rework = [...Object.keys(this.proceed[package_name]), requested_version];
+      delete this.proceed[package_name];
+      delete this._pkgCache[package_name];
+
+      for(let previous of rework)
+        await this.process_package(package_name, previous, true);
+      return;
     }
 
     var version = manifest.versions[target_version];
@@ -148,29 +145,19 @@ class mirror {
 
 
     if(await this.check_pool(shasum, dist._tarball || dist.tarball))
-      touch = true;
+      touched = true;
 
     //now check all dependencies
 
     //prevent full recurse
-    this.proceed[hk] = true;
+    this.proceed[package_name][requested_version] = true;
 
     var dep = {...version.dependencies, ...version.peerDependencies};
     for(var dep_name in dep)
       await this.process_package(dep_name, dep[dep_name]);
 
-
-    if(touch) {
-      for(let version in manifest.versions) {
-        if(!manifest.versions[version].dist._tarball)
-          manifest.versions[version].dist._tarball = manifest.versions[version].dist.tarball;
-        manifest.versions[version].dist.tarball = this.pool_url(manifest.versions[version].dist.shasum);
-      }
+    if(touched)
       this.trace("TOUCHED");
-      fs.writeFileSync(manifest_path, JSON.stringify(manifest));
-    }
-
-
   }
 
   pool_url(shasum) {
@@ -184,8 +171,16 @@ class mirror {
     var res = await fetch(remote_url);
     if(res.statusCode != 200)
       throw `Cannot fetch package ${package_name}`;
-    var body = JSON.parse(await drain(res));
-    return body;
+    var manifest = JSON.parse(await drain(res));
+
+    for(let version in manifest.versions) {
+      if(!manifest.versions[version].dist._tarball)
+        manifest.versions[version].dist._tarball = manifest.versions[version].dist.tarball;
+
+      manifest.versions[version].dist.tarball = this.pool_url(manifest.versions[version].dist.shasum);
+    }
+
+    return manifest;
   }
 
 
