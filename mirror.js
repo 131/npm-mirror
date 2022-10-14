@@ -35,22 +35,17 @@ class mirror {
 
     //directory urls ends with /
     this.public_pool_url     = config.public_pool_url;
-    this.remote_registry_url = config.remote_registry_url;
+    this.remote_registry_url = config.remote_registry_url || 'https://registry.npmjs.org';
 
     this.proceed = {};
     this._pkgCache = {};
 
-    this.ban = new RegExp(config.exclude_mask);
+    this.ban = new RegExp(config.exclude_mask || '$a');
     this.banversion = new RegExp("^https?://|git://");
 
     this.trace = console.log.bind(console);
   }
 
-  parse() {
-    var packages_list = glob.sync(sprintf("%s/*", this.packages_dir));
-    packages_list = packages_list.map(v => JSON.parse(fs.readFileSync(path.resolve(v), 'utf-8')));
-    this.trace("Now ignited with %d packages", packages_list.length);
-  }
 
   feed(package_body) {
 
@@ -111,7 +106,7 @@ class mirror {
     if(!this.proceed[package_name])
       this.proceed[package_name] = {};
 
-    if(requested_version != "latest" && !semver.validRange(requested_version))
+    if(!semver.validRange(requested_version))
       throw `Invalid semver '${requested_version}' of package ${package_name}`;
 
 
@@ -137,7 +132,7 @@ class mirror {
     }
 
     var full_versions_list = Object.keys(manifest.versions || {});
-    var target_version = requested_version == "latest" ? manifest["dist-tags"].latest : semver.maxSatisfying(full_versions_list, requested_version);
+    var target_version = semver.maxSatisfying(full_versions_list, requested_version);
     if(!target_version) {
       if(force)
         throw `Cannot find target version ${package_name}@${requested_version}`;
@@ -159,9 +154,6 @@ class mirror {
 
     //prevent full recurse
     this.proceed[hk] = true;
-
-    if(requested_version != 'latest')
-      await this.process_package(package_name, 'latest');
 
     var dep = {...version.dependencies, ...version.peerDependencies};
     for(var dep_name in dep)
@@ -188,6 +180,7 @@ class mirror {
 
   async fetch_package(package_name) {
     var remote_url = sprintf("%s/%s", this.remote_registry_url, package_name.replace('/', '%2f'));
+
     var res = await fetch(remote_url);
     if(res.statusCode != 200)
       throw `Cannot fetch package ${package_name}`;

@@ -99,6 +99,7 @@ describe("Full test suite", function() {
     let official = cleanup(JSON.parse(await drain(child.stdout)));
     console.log("Cleaning up");
     await rmrf(path.join(test_dir, "node_modules"));
+    await rmrf(path.join(test_dir, ".cache"));
 
     console.log("Running npm install with mirror registry");
     await passthru("npm", ["install", "--force", `--registry=${registry_url}`], {...ctx});
@@ -106,6 +107,9 @@ describe("Full test suite", function() {
     console.log("Recording status as challenge");
     child = spawn("npm", ["ls", "--json"], {...ctx});
     let mirror = cleanup(JSON.parse(await drain(child.stdout)));
+
+
+    console.log("Comparing challenges");
     expect(mirror).to.eql(official);
   });
 
