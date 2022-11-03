@@ -55,14 +55,16 @@ class server {
       try {
         return await this.process(req, res);
       } catch(err) {
-        res.status(500).send(String(err));
+        res.statusCode = 500;
+        res.end(String(err));
       }
     });
     this.app.put("/feed", async (req, res) => {
       try {
         return await this.feed(req, res);
       } catch(err) {
-        res.status(500).send(String(err));
+        res.statusCode = 500;
+        res.end(String(err));
       }
     });
 
