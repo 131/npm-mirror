@@ -2,8 +2,9 @@
   "name": "npm-registry-mirror",
   "version": "2.2.2",
   "description": "npm-registry-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs all of the dependencies for a particular node module and writes them to the local filesystem so that a simple webserver can behave like a read-only compliant package registry.",
-  "main": "index.js",
+  "main": "server.js",
   "dependencies": {
+    "cnyks": "^3.2.1",
     "express": "^4.14.0",
     "glob": "^7.0.3",
     "mout": "~1.0.0",
@@ -11,6 +12,7 @@
     "semver": "^5.1.0"
   },
   "scripts": {
+    "start": "cnyks . --ir://start",
     "preversion": "npm run eslint",
     "eslint": "eslint .",
     "test": "npm run eslint && npm run cover",
@@ -18,8 +20,8 @@
     "cover": "nyc mocha"
   },
   "devDependencies": {
-    "eslint-plugin-ivs": "^4.0.1",
     "eslint": "^8.57.0",
+    "eslint-plugin-ivs": "^4.0.1",
     "expect.js": "^0.3.1",
     "mocha": "^3.1.2",
     "nyc": "^15.1.0"

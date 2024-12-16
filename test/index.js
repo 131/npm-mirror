@@ -89,7 +89,8 @@ describe("Full test suite", function() {
 
     let ctx = {cwd : test_dir, env : {
       ...process.env,
-      npm_config_cache : path.join(test_dir, ".cache"),
+      NPM_CONFIG_CACHE : path.join(test_dir, ".cache"),
+      NPM_CONFIG_PACKAGE_LOCK : false,
     }, shell : true};
 
     await passthru("npm", ["install", "--force"], {...ctx});

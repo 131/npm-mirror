@@ -1,9 +1,9 @@
 FROM node:20
-ENV NODE_PATH=/usr/local/lib/node_modules/
+WORKDIR /usr/app
 
-RUN npm install -g cnyks npm-registry-mirror
+COPY . .
+RUN npm install --production
 
 
-CMD ["cnyks", "npm-registry-mirror/server", "--ir://start"]
 LABEL "org.opencontainers.image.version"="2.2.2"
 LABEL "org.opencontainers.image.source"="git@github.com:131/npm-mirror.git"
