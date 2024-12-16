@@ -5,5 +5,5 @@ RUN npm install -g cnyks npm-registry-mirror
 
 
 CMD ["cnyks", "npm-registry-mirror/server", "--ir://start"]
-LABEL "org.opencontainers.image.version"="2.2.1"
+LABEL "org.opencontainers.image.version"="2.2.2"
 LABEL "org.opencontainers.image.source"="git@github.com:131/npm-mirror.git"
