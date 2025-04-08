@@ -8,6 +8,7 @@ const crypto = require('crypto');
 
 const semver  = require('semver');
 const glob     = require('glob');
+const npa      = require('npm-package-arg');
 const sprintf = util.format;
 
 const fetch = require('nyks/http/fetch');
@@ -41,7 +42,6 @@ class mirror {
     this._pkgCache = {};
 
     this.ban = new RegExp(config.exclude_mask || '^$');
-    this.banversion = new RegExp("^https?://|git://");
 
     this.trace = console.log.bind(console);
   }
@@ -92,13 +92,30 @@ class mirror {
   async process_package(package_name, requested_version, forced = false) {
     var touched = false;
 
+    try {
+      const parsed = npa.resolve(package_name, requested_version);
+
+      if(["remote", "git"].includes(parsed.type))
+        return touched; //skip that
+
+      if(parsed.type == "alias") {
+        package_name = parsed.subSpec.name;
+        requested_version = parsed.subSpec.fetchSpec;
+      }
+
+    } catch(ex) {
+      console.log('Invalid package', package_name, requested_version, ex);
+      return touched;
+    }
+
+
     if(!this.proceed[package_name])
       this.proceed[package_name] = {};
 
     if(this.proceed[package_name][requested_version])
       return touched;
 
-    if(this.ban.test(package_name) || this.banversion.test(requested_version)) {
+    if(this.ban.test(package_name)) {
       this.proceed[package_name][requested_version] = true;
       return touched;
     }
