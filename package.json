@@ -1,6 +1,6 @@
 {
   "name": "npm-registry-mirror",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "description": "npm-registry-mirror is a utility for mirroring a subset of npm packages from another npm registry. It syncs all of the dependencies for a particular node module and writes them to the local filesystem so that a simple webserver can behave like a read-only compliant package registry.",
   "main": "server.js",
   "dependencies": {
