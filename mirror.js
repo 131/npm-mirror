@@ -157,12 +157,10 @@ class mirror {
 
     var version = manifest.versions[target_version];
 
-    var dist = version.dist;
-    var shasum = dist.shasum;
-
-
-    if(await this.check_pool(shasum, dist._tarball || dist.tarball))
+    if(await this.check_pool(version.dist)) {
       touched = true;
+      fs.writeFileSync(manifest_path, JSON.stringify(manifest));
+    }
 
     //now check all dependencies
 
@@ -193,8 +191,6 @@ class mirror {
     for(let version in manifest.versions) {
       if(!manifest.versions[version].dist._tarball)
         manifest.versions[version].dist._tarball = manifest.versions[version].dist.tarball;
-
-      manifest.versions[version].dist.tarball = this.pool_url(manifest.versions[version].dist.shasum);
     }
 
     return manifest;
@@ -202,10 +198,14 @@ class mirror {
 
 
   //check if a file is available in pool, and fetch it remotly if it's not
-  async check_pool(shasum, remote_url) {
+  async check_pool(dist) {
+    let {shasum, _tarball : remote_url, tarball} = dist;
+
     var pool_path = path.join(this.pool_dir, shasum.substr(0, 2), shasum.substr(2, 1), shasum);
+    dist.tarball   = this.pool_url(shasum);
+
     if(fs.existsSync(pool_path))
-      return;
+      return tarball != dist.tarball;
 
     mkdirpSync(path.dirname(pool_path));
 

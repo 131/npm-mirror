@@ -12,6 +12,7 @@ const rmrf     = require('nyks/fs/rmrf');
 const drain    = require('nyks/stream/drain');
 
 const expect = require('expect.js');
+const Mirror = require('../mirror');
 const Server = require('../server');
 
 /**
@@ -28,6 +29,65 @@ const mock_manifest =  {
     "@slack/types" : "1.1.0"
   }
 };
+
+
+describe("Tarball rewrite behavior", function() {
+  const fixture_root = path.join(__dirname, "rewrite-fixture");
+  const manifest_dir = path.join(fixture_root, "manifests");
+  const pool_dir = path.join(fixture_root, "pool");
+  const packages_dir = path.join(fixture_root, "packages");
+  const public_pool_url = "http://mirror.local/pool/";
+
+  const createMirror = async function() {
+    await rmrf(fixture_root);
+    mkdirpSync(manifest_dir);
+    mkdirpSync(pool_dir);
+    mkdirpSync(packages_dir);
+
+    let mirror = new Mirror({manifest_dir, pool_dir, packages_dir, public_pool_url});
+    mirror.trace = async function() {};
+    return mirror;
+  };
+
+  after(async () => {
+    await rmrf(fixture_root);
+  });
+
+  it("should rewrite an upstream tarball to the pool url without re-downloading when the file already exists", async () => {
+    let mirror = await createMirror();
+
+    let shasum = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    let remote = "https://registry.example/pkg/-/pkg-1.0.0.tgz";
+    let package_path = path.join(packages_dir, "pkg");
+
+    let pool_path = path.join(pool_dir, shasum.substr(0, 2), shasum.substr(2, 1), shasum);
+    mkdirpSync(path.dirname(pool_path));
+    fs.writeFileSync(pool_path, "pkg-1");
+
+    fs.writeFileSync(package_path, JSON.stringify({
+      name : "pkg",
+      versions : {
+        "1.0.0" : {
+          name : "pkg",
+          version : "1.0.0",
+          dist : {shasum, tarball : remote, _tarball : remote},
+        },
+      },
+    }));
+
+    mirror.fetch_package = async function() {
+      throw new Error("fetch_package should not be called");
+    };
+
+    await mirror.process_package("pkg", "1.x");
+
+    let package_manifest = JSON.parse(fs.readFileSync(package_path));
+    expect(package_manifest.versions["1.0.0"].dist.tarball).to.be(mirror.pool_url(shasum));
+    expect(package_manifest.versions["1.0.0"].dist._tarball).to.be(remote);
+    expect(fs.readFileSync(pool_path).toString()).to.be("pkg-1");
+  });
+});
+
 
 
 describe("Full test suite", function() {
