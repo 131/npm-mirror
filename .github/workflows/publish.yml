@@ -8,9 +8,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
-permissions:
-  id-token: write  # Required for OIDC
-  contents: read
 
 jobs:
   publish:
@@ -19,6 +16,7 @@ jobs:
 
     permissions:
       contents: read
+      id-token: write  # Required for OIDC
       packages: write
 
     steps:
