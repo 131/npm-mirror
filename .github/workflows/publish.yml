@@ -8,6 +8,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
 jobs:
   publish:
     environment: production
@@ -36,13 +40,11 @@ jobs:
 
     - uses: actions/setup-node@v2
       with:
-        node-version: '16.x'
+        node-version: '24.x'
         registry-url: 'https://registry.npmjs.org'
     - run: npm install
     - run: npm test
     - run: npm publish
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
