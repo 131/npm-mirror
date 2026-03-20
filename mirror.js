@@ -134,15 +134,15 @@ class mirror {
 
     var manifest = this._pkgCache[package_name];
 
-    var full_versions_list = Object.keys(manifest.versions || {});
-    var target_version     = semver.maxSatisfying(full_versions_list, requested_version);
+    var current_versions_list = manifest.versions || {};
+    var target_version     = semver.maxSatisfying(Object.keys(current_versions_list), requested_version);
 
     if(!target_version) {
       if(forced)
         throw `Cannot find target version ${package_name}@${requested_version}`;
 
       this.trace("Downloading remote manifest", package_name);
-      let manifest = await this.fetch_package(package_name);
+      let manifest = await this.fetch_package(current_versions_list, package_name);
       fs.writeFileSync(manifest_path, JSON.stringify(manifest));
 
       this.trace("Forcing re-analysis");
@@ -180,7 +180,7 @@ class mirror {
     return this.public_pool_url + pool_path; //no slash inbetween
   }
 
-  async fetch_package(package_name) {
+  async fetch_package(current_versions_list, package_name) {
     var remote_url = sprintf("%s/%s", this.remote_registry_url, package_name.replace('/', '%2f'));
 
     var res = await fetch(remote_url);
@@ -189,8 +189,17 @@ class mirror {
     var manifest = JSON.parse(await drain(res));
 
     for(let version in manifest.versions) {
-      if(!manifest.versions[version].dist._tarball)
+      let current_version = current_versions_list[version];
+      if(current_version) {
+        if(current_version.dist.shasum != manifest.versions[version].dist.shasum)
+          throw `Corrupted cache poisonning ${package_name} version ${current_version}`;
+
+        manifest.versions[version].dist._tarball = current_version.dist._tarball;
+        manifest.versions[version].dist.tarball  = current_version.dist.tarball;
+      } else if(!manifest.versions[version].dist._tarball) {
         manifest.versions[version].dist._tarball = manifest.versions[version].dist.tarball;
+        delete manifest.versions[version].dist.tarball;
+      }
     }
 
     return manifest;
