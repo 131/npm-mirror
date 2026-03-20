@@ -189,16 +189,17 @@ class mirror {
     var manifest = JSON.parse(await drain(res));
 
     for(let version in manifest.versions) {
-      let current_version = current_versions_list[version];
+      let current_version = current_versions_list[version], next_version = manifest.versions[version];
+
       if(current_version) {
-        if(current_version.dist.shasum != manifest.versions[version].dist.shasum)
+        if(current_version.dist.shasum != next_version.dist.shasum)
           throw `Corrupted cache poisonning ${package_name} version ${current_version}`;
 
-        manifest.versions[version].dist._tarball = current_version.dist._tarball;
-        manifest.versions[version].dist.tarball  = current_version.dist.tarball;
-      } else if(!manifest.versions[version].dist._tarball) {
-        manifest.versions[version].dist._tarball = manifest.versions[version].dist.tarball;
-        delete manifest.versions[version].dist.tarball;
+        next_version.dist.tarball  = current_version.dist.tarball;
+        next_version.dist._tarball = current_version.dist._tarball;
+        next_version.dist._mirrored  = current_version.dist._mirrored;
+      } else {
+        next_version.dist._tarball = next_version.dist.tarball;
       }
     }
 
@@ -208,13 +209,14 @@ class mirror {
 
   //check if a file is available in pool, and fetch it remotly if it's not
   async check_pool(dist) {
-    let {shasum, _tarball : remote_url, tarball} = dist;
+    let {shasum, _tarball : remote_url, tarball, _mirrored} = dist;
 
     var pool_path = path.join(this.pool_dir, shasum.substr(0, 2), shasum.substr(2, 1), shasum);
     dist.tarball   = this.pool_url(shasum);
+    dist._mirrored = fs.existsSync(pool_path);
 
-    if(fs.existsSync(pool_path))
-      return tarball != dist.tarball;
+    if(dist._mirrored)
+      return tarball != dist.tarball || !_mirrored;
 
     mkdirpSync(path.dirname(pool_path));
 
@@ -232,6 +234,8 @@ class mirror {
       throw  `Corrupted download hash ${shasum} vs ${hash}`;
 
     fs.renameSync(tmp_path, pool_path);
+
+    dist._mirrored = true;
     return true;
   }
 
