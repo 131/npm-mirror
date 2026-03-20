@@ -5,5 +5,5 @@ COPY . .
 RUN npm install --production
 
 
-LABEL "org.opencontainers.image.version"="2.2.9"
+LABEL "org.opencontainers.image.version"="2.2.10"
 LABEL "org.opencontainers.image.source"="git@github.com:131/npm-mirror.git"
